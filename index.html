@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CoD Viewer</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: #eee;
+      padding: 20px;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    select, button {
+      padding: 8px;
+    }
+
+    .card {
+      background: #1e1e1e;
+      padding: 14px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+    }
+
+    .card-header {
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    .card-header strong {
+      font-size: 15px;
+      color: #eee;
+      margin-right: 8px;
+    }
+
+    .steps {
+      display: flex;
+      gap: 12px;
+    }
+
+    .step {
+      flex: 1;
+      background: #252525;
+      border-radius: 6px;
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .step b {
+      display: block;
+      font-size: 12px;
+      color: #f90;
+      margin-bottom: 4px;
+    }
+
+    .step p {
+      font-size: 13px;
+      color: #ccc;
+      margin: 0 0 6px;
+      word-break: break-all;
+    }
+
+    .step img {
+      width: 100%;
+      border-radius: 4px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<h1>CoD Grenade Viewer</h1>
+
+<div class="controls">
+  <select id="map">
+    <option value="">すべてのマップ</option>
+  </select>
+
+  <select id="side">
+    <option value="">すべて</option>
+    <option value="attack">Attack</option>
+    <option value="defense">Defense</option>
+  </select>
+
+  <select id="site">
+    <option value="">すべて</option>
+    <option value="A">A</option>
+    <option value="B">B</option>
+  </select>
+
+  <select id="type">
+    <option value="">すべてのタイプ</option>
+    <option value="grenade">Grenade</option>
+    <option value="wallbang">Wallbang</option>
+    <option value="snipe">Snipe</option>
+  </select>
+
+  <select id="situation">
+    <option value="">すべてのシチュエーション</option>
+    <option value="retake">Retake</option>
+    <option value="entry">Entry</option>
+    <option value="hold">Hold</option>
+  </select>
+
+  <button onclick="loadData()">検索</button>
+</div>
+
+<div id="result"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const client = supabase.createClient(
+  "https://tcfkrbtartmwlxtoxfmy.supabase.co",
+  "sb_publishable_5IDcKc0x8RacKp6wI0st3A_YyTVTYBk"
+);
+
+async function initMaps() {
+  const { data, error } = await client.from("maps").select("id, name").order("name");
+  if (error || !data) return;
+
+  const sel = document.getElementById("map");
+  data.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = m.name;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadData() {
+  const map       = document.getElementById("map").value;
+  const side      = document.getElementById("side").value;
+  const site      = document.getElementById("site").value;
+  const type      = document.getElementById("type").value;
+  const situation = document.getElementById("situation").value;
+
+  let query = client.from("positions").select("*");
+  if (map)       query = query.eq("map_id",    map);
+  if (side)      query = query.eq("side",      side);
+  if (site)      query = query.eq("site",      site);
+  if (type)      query = query.eq("type",      type);
+  if (situation) query = query.eq("situation", situation);
+
+  const { data, error } = await query;
+
+  const result = document.getElementById("result");
+  result.innerHTML = "";
+
+  if (error) {
+    result.innerText = error.message;
+    return;
+  }
+
+  if (data.length === 0) {
+    result.innerText = "データなし";
+    return;
+  }
+
+  data.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <div class="card-header">
+        <strong>${item.type}</strong>
+        ${item.side} / ${item.site} / ${item.situation}
+      </div>
+      <div class="steps">
+        <div class="step">
+          <b>① 立ち位置</b>
+          <p>${item.throw_pos || "-"}</p>
+          ${item.throw_img ? `<img src="${item.throw_img}">` : ""}
+        </div>
+        <div class="step">
+          <b>② 視点合わせ</b>
+          <p>${item.aim_pos || "-"}</p>
+          ${item.aim_img ? `<img src="${item.aim_img}">` : ""}
+        </div>
+        <div class="step">
+          <b>③ 着弾位置</b>
+          <p>${item.land_pos || "-"}</p>
+          ${item.land_img ? `<img src="${item.land_img}">` : ""}
+        </div>
+      </div>
+    `;
+
+    result.appendChild(div);
+  });
+}
+
+initMaps();
+loadData();
+</script>
+
+</body>
+</html>
