@@ -1,120 +1,305 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>CoD Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoD グレポジ</title>
   <style>
-    body {
-      font-family: Arial;
-      background: #111;
-      color: #eee;
-      padding: 20px;
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --bg:         #0d0d12;
+      --surface:    #16161f;
+      --surface-2:  #1e1e2a;
+      --border:     rgba(255,255,255,0.07);
+      --accent:     #f97316;
+      --text:       #e8e8f0;
+      --text-2:     #6b6b90;
+      --radius:     10px;
     }
 
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px 16px;
+      margin: 0;
+      min-height: 100dvh;
+    }
+
+    /* ===== ヘッダー ===== */
+    header { margin-bottom: 24px; }
+
+    h1 {
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 4px;
+    }
+
+    header p {
+      font-size: 13px;
+      color: var(--text-2);
+      margin: 0;
+    }
+
+    /* ===== コントロール ===== */
     .controls {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
       margin-bottom: 20px;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
+      gap: 12px;
+      align-items: flex-end;
     }
 
-    select, button {
-      padding: 8px;
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1 1 140px;
+      min-width: 120px;
     }
 
+    .filter-group label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    select {
+      padding: 9px 32px 9px 12px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6b90' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+        no-repeat right 12px center;
+      color: var(--text);
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    button#search-btn {
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      align-self: flex-end;
+      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.1s;
+      flex-shrink: 0;
+    }
+
+    button#search-btn:hover  { opacity: 0.88; }
+    button#search-btn:active { opacity: 0.75; transform: scale(0.97); }
+
+    /* ===== 件数 ===== */
+    #result-count {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 10px;
+    }
+
+    /* ===== カード ===== */
     .card {
-      background: #1e1e1e;
-      padding: 14px;
-      margin-bottom: 15px;
-      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 10px;
+      transition: border-color 0.2s;
     }
+
+    .card:hover { border-color: rgba(255,255,255,0.14); }
 
     .card-header {
-      margin-bottom: 10px;
-      font-size: 13px;
-      color: #aaa;
-    }
-
-    .card-header strong {
-      font-size: 15px;
-      color: #eee;
-      margin-right: 8px;
-    }
-
-    .steps {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-attack  { background: rgba(96,165,250,0.14);  color: #93c5fd; }
+    .badge-defense { background: rgba(248,113,113,0.14); color: #fca5a5; }
+    .badge-site    { background: rgba(167,139,250,0.14); color: #c4b5fd; }
+    .badge-retake  { background: rgba(251,191,36,0.14);  color: #fcd34d; }
+    .badge-entry   { background: rgba(52,211,153,0.14);  color: #6ee7b7; }
+    .badge-hold    { background: rgba(156,163,175,0.14); color: #d1d5db; }
+
+    /* ===== ステップ ===== */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
     }
 
     .step {
-      flex: 1;
-      background: #252525;
-      border-radius: 6px;
-      padding: 10px;
-      min-width: 0;
+      background: var(--surface-2);
+      border-radius: 8px;
+      padding: 12px;
     }
 
-    .step b {
-      display: block;
-      font-size: 12px;
-      color: #f90;
-      margin-bottom: 4px;
+    .step-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 6px;
     }
 
     .step p {
-      font-size: 13px;
-      color: #ccc;
-      margin: 0 0 6px;
-      word-break: break-all;
+      font-size: 12px;
+      color: var(--text-2);
+      margin: 0 0 8px;
+      line-height: 1.6;
+      word-break: break-word;
     }
 
     .step img {
       width: 100%;
-      border-radius: 4px;
+      border-radius: 6px;
       display: block;
+      cursor: zoom-in;
+      transition: opacity 0.2s;
+    }
+
+    .step img:active { opacity: 0.7; }
+
+    /* ===== ライトボックス ===== */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      cursor: zoom-out;
+    }
+
+    #lightbox.open { display: flex; }
+
+    #lightbox img {
+      max-width: 100%;
+      max-height: 90dvh;
+      border-radius: 8px;
+      object-fit: contain;
+      cursor: default;
+    }
+
+    #lightbox-close {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      font-size: 18px;
+      color: #fff;
+      background: rgba(255,255,255,0.12);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 6px 11px;
+      flex: none;
+      max-width: none;
+      transition: background 0.15s;
+      line-height: 1;
+    }
+
+    #lightbox-close:hover { background: rgba(255,255,255,0.22); }
+
+    /* ===== スマホ ===== */
+    @media (max-width: 640px) {
+      .steps { grid-template-columns: 1fr; }
+
+      .filter-group { flex: 1 1 calc(50% - 6px); }
+
+      button#search-btn { width: 100%; }
     }
   </style>
 </head>
 <body>
 
-<h1>CoD Grenade Viewer</h1>
+<header>
+  <h1>CoD グレポジ</h1>
+  <p>Search &amp; Destroy 向けグレネード投げ位置データベース</p>
+</header>
 
 <div class="controls">
-  <select id="map">
-    <option value="">すべてのマップ</option>
-  </select>
+  <div class="filter-group">
+    <label for="map">マップ</label>
+    <select id="map" onchange="loadData()">
+      <option value="">すべて</option>
+    </select>
+  </div>
 
-  <select id="side">
-    <option value="">すべて</option>
-    <option value="attack">Attack</option>
-    <option value="defense">Defense</option>
-  </select>
+  <div class="filter-group">
+    <label for="side">サイド</label>
+    <select id="side" onchange="loadData()">
+      <option value="">すべて</option>
+      <option value="attack">Attack（攻撃側）</option>
+      <option value="defense">Defense（守備側）</option>
+    </select>
+  </div>
 
-  <select id="site">
-    <option value="">すべて</option>
-    <option value="A">A</option>
-    <option value="B">B</option>
-  </select>
+  <div class="filter-group">
+    <label for="site">サイト</label>
+    <select id="site" onchange="loadData()">
+      <option value="">すべて</option>
+      <option value="A">A サイト</option>
+      <option value="B">B サイト</option>
+    </select>
+  </div>
 
-  <select id="type">
-    <option value="">すべてのタイプ</option>
-    <option value="grenade">Grenade</option>
-    <option value="wallbang">Wallbang</option>
-    <option value="snipe">Snipe</option>
-  </select>
+  <div class="filter-group">
+    <label for="situation">シチュエーション</label>
+    <select id="situation" onchange="loadData()">
+      <option value="">すべて</option>
+      <option value="retake">Retake（サイト取返し）</option>
+      <option value="entry">Entry（サイトエントリー）</option>
+      <option value="hold">Hold</option>
+    </select>
+  </div>
 
-  <select id="situation">
-    <option value="">すべてのシチュエーション</option>
-    <option value="retake">Retake</option>
-    <option value="entry">Entry</option>
-    <option value="hold">Hold</option>
-  </select>
-
-  <button onclick="loadData()">検索</button>
+  <button id="search-btn" onclick="loadData()">検索</button>
 </div>
 
+<div id="result-count"></div>
 <div id="result"></div>
+
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="画像拡大">
+  <button id="lightbox-close" aria-label="閉じる">✕</button>
+  <img id="lightbox-img" src="" alt="拡大画像">
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
@@ -123,10 +308,28 @@ const client = supabase.createClient(
   "sb_publishable_5IDcKc0x8RacKp6wI0st3A_YyTVTYBk"
 );
 
+const lightbox    = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightbox-img");
+
+function openLightbox(src) {
+  lightboxImg.src = src;
+  lightbox.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeLightbox() {
+  lightbox.classList.remove("open");
+  lightboxImg.src = "";
+  document.body.style.overflow = "";
+}
+
+lightbox.addEventListener("click", (e) => { if (e.target === lightbox) closeLightbox(); });
+document.getElementById("lightbox-close").addEventListener("click", closeLightbox);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
+
 async function initMaps() {
   const { data, error } = await client.from("maps").select("id, name").order("name");
   if (error || !data) return;
-
   const sel = document.getElementById("map");
   data.forEach(m => {
     const opt = document.createElement("option");
@@ -136,63 +339,78 @@ async function initMaps() {
   });
 }
 
+function makeImg(src) {
+  if (!src) return "";
+  return `<img src="${src}" loading="lazy" decoding="async" alt="" onclick="openLightbox(this.src)">`;
+}
+
+const BADGE_CLASS = {
+  attack:  "badge-attack",
+  defense: "badge-defense",
+  A:       "badge-site",
+  B:       "badge-site",
+  retake:  "badge-retake",
+  entry:   "badge-entry",
+  hold:    "badge-hold",
+};
+
+function badge(value) {
+  const cls = BADGE_CLASS[value] ?? "";
+  return `<span class="badge ${cls}">${value}</span>`;
+}
+
 async function loadData() {
   const map       = document.getElementById("map").value;
   const side      = document.getElementById("side").value;
   const site      = document.getElementById("site").value;
-  const type      = document.getElementById("type").value;
   const situation = document.getElementById("situation").value;
 
-  let query = client.from("positions").select("*");
+  let query = client.from("positions")
+    .select("side,site,situation,throw_pos,throw_img,aim_pos,aim_img,land_pos,land_img");
   if (map)       query = query.eq("map_id",    map);
   if (side)      query = query.eq("side",      side);
   if (site)      query = query.eq("site",      site);
-  if (type)      query = query.eq("type",      type);
   if (situation) query = query.eq("situation", situation);
 
   const { data, error } = await query;
 
-  const result = document.getElementById("result");
-  result.innerHTML = "";
+  const result      = document.getElementById("result");
+  const resultCount = document.getElementById("result-count");
+  result.innerHTML      = "";
+  resultCount.textContent = "";
 
-  if (error) {
-    result.innerText = error.message;
-    return;
-  }
+  if (error) { result.textContent = error.message; return; }
+  if (!data.length) { result.textContent = "データなし"; return; }
 
-  if (data.length === 0) {
-    result.innerText = "データなし";
-    return;
-  }
+  resultCount.textContent = `${data.length} 件`;
 
   data.forEach(item => {
     const div = document.createElement("div");
     div.className = "card";
-
     div.innerHTML = `
       <div class="card-header">
-        <strong>${item.type}</strong>
-        ${item.side} / ${item.site} / ${item.situation}
+        ${badge(item.side)}
+        ${badge(item.site)}
+        ${badge(item.situation)}
       </div>
       <div class="steps">
         <div class="step">
-          <b>① 立ち位置</b>
+          <div class="step-label">① 立ち位置</div>
           <p>${item.throw_pos || "-"}</p>
-          ${item.throw_img ? `<img src="${item.throw_img}">` : ""}
+          ${makeImg(item.throw_img)}
         </div>
         <div class="step">
-          <b>② 視点合わせ</b>
+          <div class="step-label">② 視点合わせ</div>
           <p>${item.aim_pos || "-"}</p>
-          ${item.aim_img ? `<img src="${item.aim_img}">` : ""}
+          ${makeImg(item.aim_img)}
         </div>
         <div class="step">
-          <b>③ 着弾位置</b>
+          <div class="step-label">③ 着弾位置</div>
           <p>${item.land_pos || "-"}</p>
-          ${item.land_img ? `<img src="${item.land_img}">` : ""}
+          ${makeImg(item.land_img)}
         </div>
       </div>
     `;
-
     result.appendChild(div);
   });
 }
