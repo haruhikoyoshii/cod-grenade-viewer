@@ -93,23 +93,6 @@
       border-color: var(--accent);
     }
 
-    button#search-btn {
-      padding: 9px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 8px;
-      border: none;
-      background: var(--accent);
-      color: #fff;
-      cursor: pointer;
-      align-self: flex-end;
-      white-space: nowrap;
-      transition: opacity 0.15s, transform 0.1s;
-      flex-shrink: 0;
-    }
-
-    button#search-btn:hover  { opacity: 0.88; }
-    button#search-btn:active { opacity: 0.75; transform: scale(0.97); }
 
     /* ===== 件数 ===== */
     #result-count {
@@ -290,7 +273,6 @@
     </select>
   </div>
 
-  <button id="search-btn" onclick="loadData()">検索</button>
 </div>
 
 <div id="result-count"></div>
@@ -359,32 +341,43 @@ function badge(value) {
   return `<span class="badge ${cls}">${value}</span>`;
 }
 
-async function loadData() {
+let allData = [];
+
+async function initData() {
+  const { data, error } = await client.from("positions")
+    .select("map_id,side,site,situation,throw_pos,throw_img,aim_pos,aim_img,land_pos,land_img");
+  if (error) { document.getElementById("result").textContent = error.message; return; }
+  allData = data;
+  renderData();
+}
+
+function loadData() {
+  renderData();
+}
+
+function renderData() {
   const map       = document.getElementById("map").value;
   const side      = document.getElementById("side").value;
   const site      = document.getElementById("site").value;
   const situation = document.getElementById("situation").value;
 
-  let query = client.from("positions")
-    .select("side,site,situation,throw_pos,throw_img,aim_pos,aim_img,land_pos,land_img");
-  if (map)       query = query.eq("map_id",    map);
-  if (side)      query = query.eq("side",      side);
-  if (site)      query = query.eq("site",      site);
-  if (situation) query = query.eq("situation", situation);
-
-  const { data, error } = await query;
+  const filtered = allData.filter(item =>
+    (!map       || item.map_id    === map) &&
+    (!side      || item.side      === side) &&
+    (!site      || item.site      === site) &&
+    (!situation || item.situation === situation)
+  );
 
   const result      = document.getElementById("result");
   const resultCount = document.getElementById("result-count");
-  result.innerHTML      = "";
+  result.innerHTML        = "";
   resultCount.textContent = "";
 
-  if (error) { result.textContent = error.message; return; }
-  if (!data.length) { result.textContent = "データなし"; return; }
+  if (!filtered.length) { result.textContent = "データなし"; return; }
 
-  resultCount.textContent = `${data.length} 件`;
+  resultCount.textContent = `${filtered.length} 件`;
 
-  data.forEach(item => {
+  filtered.forEach(item => {
     const div = document.createElement("div");
     div.className = "card";
     div.innerHTML = `
@@ -416,7 +409,7 @@ async function loadData() {
 }
 
 initMaps();
-loadData();
+initData();
 </script>
 
 </body>
